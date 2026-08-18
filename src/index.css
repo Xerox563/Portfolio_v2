@@ -73,6 +73,7 @@ body {
 
 /* hide default cursor on capable pointers — custom cursor takes over */
 @media (hover: hover) and (pointer: fine) {
+  html,
   body {
     cursor: none;
   }
@@ -2014,12 +2015,16 @@ ul {
   background: rgba(7, 7, 11, 0.72);
   backdrop-filter: blur(18px) saturate(120%);
   -webkit-backdrop-filter: blur(18px) saturate(120%);
+  pointer-events: auto;
 }
 .project-modal__panel {
   position: relative;
   width: min(880px, 100%);
   max-height: min(86svh, 720px);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   border-radius: calc(var(--radius) + 6px);
   display: grid;
   grid-template-columns: 0.9fr 1.1fr;
@@ -2315,12 +2320,16 @@ ul {
   background: rgba(7, 7, 11, 0.78);
   backdrop-filter: blur(20px) saturate(120%);
   -webkit-backdrop-filter: blur(20px) saturate(120%);
+  pointer-events: auto;
 }
 .blog-modal__panel {
   position: relative;
   width: min(760px, 100%);
   max-height: min(88svh, 780px);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   border-radius: calc(var(--radius) + 6px);
   box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
   scrollbar-width: thin;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { Blog } from "../lib/api";
 import { getLenis } from "../lib/smoothScroll";
@@ -80,17 +80,27 @@ export function BlogModal({
   onLike: () => void;
 }) {
   const [heart, setHeart] = useState(false);
+  const panelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const lenis = getLenis();
     lenis?.stop();
     document.body.style.overflow = "hidden";
+
+    /* allow native touch-scroll inside the panel while Lenis is stopped */
+    const panel = panelRef.current;
+    const stopBubble = (e: TouchEvent) => e.stopPropagation();
+    panel?.addEventListener("touchstart", stopBubble, { passive: true });
+    panel?.addEventListener("touchmove", stopBubble, { passive: true });
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
+      panel?.removeEventListener("touchstart", stopBubble);
+      panel?.removeEventListener("touchmove", stopBubble);
       document.body.style.overflow = "";
       lenis?.start();
     };
@@ -118,6 +128,7 @@ export function BlogModal({
         aria-label={blog.title}
       >
         <motion.article
+          ref={panelRef}
           className="blog-modal__panel glass"
           initial={{ y: 56, opacity: 0, scale: 0.97 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
