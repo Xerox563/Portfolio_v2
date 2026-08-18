@@ -762,6 +762,14 @@ ul {
   -webkit-text-stroke: 1px var(--text);
   color: transparent;
 }
+.marquee__hl {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.marquee__item:nth-child(even) .marquee__hl {
+  -webkit-text-stroke: 0;
+  color: var(--accent);
+}
 .marquee__sep {
   margin-inline: 1.2rem;
   color: var(--accent);

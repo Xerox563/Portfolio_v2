@@ -8,7 +8,8 @@ interface MarqueeProps {
   className?: string;
 }
 
-/** Infinite marquee that also drifts on scroll for added depth. */
+/** Infinite marquee that also drifts on scroll for added depth.
+ *  Items may contain a "|" — the part before it is rendered in accent highlight. */
 export function Marquee({
   items,
   direction = "rtl",
@@ -38,7 +39,7 @@ export function Marquee({
           {[0, 1].map((dup) =>
             items.map((it, i) => (
               <span key={`${dup}-${i}`} className="marquee__item" aria-hidden={dup > 0}>
-                {it}
+                <MarqueeText text={it} />
                 <span className="marquee__sep">✦</span>
               </span>
             ))
@@ -47,4 +48,17 @@ export function Marquee({
       </motion.div>
     </section>
   );
+}
+
+function MarqueeText({ text }: { text: string }) {
+  const [hl, rest] = text.split("|");
+  if (hl && rest !== undefined) {
+    return (
+      <>
+        <span className="marquee__hl">{hl}</span>
+        <span>&nbsp;{rest}</span>
+      </>
+    );
+  }
+  return <>{text}</>;
 }

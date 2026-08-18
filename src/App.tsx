@@ -59,7 +59,14 @@ function Site() {
         <Hero />
 
         <Marquee
-          items={["Design Engineering", "Motion-First", "Immersive Web", "Brand Systems"]}
+          items={[
+            "1st Place|Hackathon Winner — i8CLOUD 2025",
+            "1635|Codeforces Expert",
+            "1872|LeetCode Knight",
+            "1600+|Problems Solved",
+            "6+|Open-Source AI-Agent Projects",
+            "5+|Technical Articles on Medium",
+          ]}
           direction="rtl"
         />
 
@@ -67,7 +74,14 @@ function Site() {
         <Skills />
 
         <Marquee
-          items={["Selected Work", "2024 — 2026", "Award-Mentioned", "Case Studies"]}
+          items={[
+            "10+|Full-Stack Apps Shipped",
+            "Full-Stack Developer",
+            "AI / RAG Engineer",
+            "Open Source Contributor",
+            "Technical Writer",
+            "Relentless Problem Solver",
+          ]}
           direction="ltr"
           speed={1.4}
         />
