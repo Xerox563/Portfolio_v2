@@ -187,13 +187,21 @@ Reduced motion users aren't asking for a worse experience. They're asking for th
   },
 ];
 
-/* ---- storage: local files by default, Upstash Redis on Vercel ---- */
+/* ---- storage: PostgreSQL (production) -> Upstash Redis -> local files ---- */
 
+const DATABASE_URL = process.env.DATABASE_URL;
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const CONTENT_KEY = "portfolio:content";
 const BLOGS_KEY = "portfolio:blogs";
 const SEED_HASH_KEY = "portfolio:seed-hash";
+const RESEED_ON_DEPLOY = process.env.RESEED_ON_DEPLOY === "1";
+
+const STORAGE_MODE = DATABASE_URL
+  ? "postgres"
+  : REDIS_URL && REDIS_TOKEN
+    ? "redis"
+    : "file";
 
 function fileHash(file) {
   try {
@@ -207,7 +215,7 @@ function fileHash(file) {
    content hash differs from the last seed. This keeps deployed data in sync
    with the repo files, while pure code deploys (unchanged files) keep the
    live Redis state (admin edits) intact. */
-async function ensureSeeded() {
+async function ensureRedisSeeded() {
   const r = await redis();
   if (!r) return;
   try {
@@ -227,6 +235,82 @@ async function ensureSeeded() {
     }
   } catch (err) {
     console.error("seed check failed:", err.message);
+  }
+}
+
+let pgPool = null;
+async function postgres() {
+  if (!pgPool && DATABASE_URL) {
+    const { default: pg } = await import("pg");
+    const { Pool } = pg;
+    const parsed = new URL(DATABASE_URL);
+    const localHost = ["localhost", "127.0.0.1", "::1", "0.0.0.0"].includes(parsed.hostname);
+    const sslMode = parsed.searchParams.get("sslmode");
+    pgPool = new Pool({
+      connectionString: DATABASE_URL,
+      max: 1,
+      connectionTimeoutMillis: 8000,
+      idleTimeoutMillis: 30000,
+      ssl:
+        sslMode === "disable"
+          ? false
+          : localHost
+            ? undefined
+            : { rejectUnauthorized: false },
+    });
+  }
+  return pgPool;
+}
+
+async function pgInit() {
+  const pool = await postgres();
+  if (!pool) return false;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS portfolio_kv (
+      key TEXT PRIMARY KEY,
+      value JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+  return true;
+}
+
+async function pgGet(key) {
+  const pool = await postgres();
+  if (!pool) return null;
+  const res = await pool.query("SELECT value FROM portfolio_kv WHERE key = $1", [key]);
+  return res.rowCount ? res.rows[0].value : null;
+}
+
+async function pgSet(key, data) {
+  const pool = await postgres();
+  if (!pool) return;
+  await pool.query(
+    `INSERT INTO portfolio_kv (key, value, updated_at)
+     VALUES ($1, $2::jsonb, now())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+    [key, JSON.stringify(data)]
+  );
+}
+
+/* Seed Postgres only when a key is missing (first run), unless
+   RESEED_ON_DEPLOY=1 forces a refresh from the bundled files on every deploy. */
+async function ensurePgSeeded() {
+  if (!(await pgInit())) return;
+  try {
+    const content = readJson(DB_FILE, null);
+    const blogs = readJson(BLOGS_FILE, null) || SEED_BLOGS;
+    const rows = await Promise.all([pgGet(CONTENT_KEY), pgGet(BLOGS_KEY)]);
+    if (content && (RESEED_ON_DEPLOY || rows[0] == null)) {
+      await pgSet(CONTENT_KEY, content);
+      console.log("seeded Postgres content");
+    }
+    if (blogs && (RESEED_ON_DEPLOY || rows[1] == null)) {
+      await pgSet(BLOGS_KEY, blogs);
+      console.log("seeded Postgres blogs");
+    }
+  } catch (err) {
+    console.error("postgres seed failed:", err.message);
   }
 }
 
@@ -262,9 +346,20 @@ async function redisSet(key, data) {
 }
 
 async function getContent() {
+  if (DATABASE_URL) {
+    try {
+      await ensurePgSeeded();
+      const cached = await pgGet(CONTENT_KEY);
+      if (cached) return cached;
+      return readJson(DB_FILE, null);
+    } catch {
+      /* postgres unavailable — fall back to local copy */
+      return readJson(DB_FILE, null);
+    }
+  }
   if (REDIS_URL && REDIS_TOKEN) {
     try {
-      await ensureSeeded();
+      await ensureRedisSeeded();
       const cached = await redisGet(CONTENT_KEY);
       if (cached) return cached;
       const local = readJson(DB_FILE, null);
@@ -279,7 +374,9 @@ async function getContent() {
 }
 
 async function saveContent(data) {
-  if (REDIS_URL && REDIS_TOKEN) {
+  if (DATABASE_URL) {
+    await pgSet(CONTENT_KEY, data);
+  } else if (REDIS_URL && REDIS_TOKEN) {
     await redisSet(CONTENT_KEY, data);
   } else {
     contentCache = data;
@@ -288,9 +385,20 @@ async function saveContent(data) {
 }
 
 async function getBlogsList() {
+  if (DATABASE_URL) {
+    try {
+      await ensurePgSeeded();
+      const cached = await pgGet(BLOGS_KEY);
+      if (cached) return cached;
+      return readJson(BLOGS_FILE, null) || SEED_BLOGS;
+    } catch {
+      /* postgres unavailable — fall back to local copy */
+      return readJson(BLOGS_FILE, null) || SEED_BLOGS;
+    }
+  }
   if (REDIS_URL && REDIS_TOKEN) {
     try {
-      await ensureSeeded();
+      await ensureRedisSeeded();
       const cached = await redisGet(BLOGS_KEY);
       if (cached) return cached;
       const local = readJson(BLOGS_FILE, null) || SEED_BLOGS;
@@ -312,7 +420,9 @@ async function getBlogsList() {
 }
 
 async function saveBlogs(list) {
-  if (REDIS_URL && REDIS_TOKEN) {
+  if (DATABASE_URL) {
+    await pgSet(BLOGS_KEY, list);
+  } else if (REDIS_URL && REDIS_TOKEN) {
     await redisSet(BLOGS_KEY, list);
   } else {
     blogsCache = list;
@@ -327,7 +437,9 @@ app.use(express.json({ limit: "6mb" }));
 app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
-    storage: REDIS_URL && REDIS_TOKEN ? "redis" : "file",
+    storage: STORAGE_MODE,
+    databaseConfigured: Boolean(DATABASE_URL),
+    redisConfigured: Boolean(REDIS_URL && REDIS_TOKEN),
     seeded: fileHash(DB_FILE) !== null && fileHash(BLOGS_FILE) !== null,
   });
 });

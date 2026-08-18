@@ -2782,3 +2782,66 @@ html {
     height: 150px;
   }
 }
+
+/* ===== extra small screens (<480px) & long-word safety ===== */
+@media (max-width: 480px) {
+  .hero__name {
+    font-size: clamp(3.6rem, 20vw, 5rem);
+  }
+  .hero__name--long {
+    font-size: clamp(1.7rem, 10.5vw, 2.6rem);
+  }
+  .hero__lede {
+    font-size: 0.95rem;
+  }
+  .hero__role {
+    font-size: 0.78rem;
+  }
+  .hero__meta--tl {
+    left: 1rem;
+  }
+  .work__row-title {
+    font-size: 1.25rem;
+  }
+  .blog__card-title,
+  .path__role,
+  .project-modal__title,
+  .blog-modal__title,
+  .work__row-title {
+    overflow-wrap: anywhere;
+  }
+  .blog-modal__close,
+  .project-modal__close {
+    top: 0.7rem;
+    right: 0.7rem;
+  }
+  .testimonials__quote {
+    font-size: 1.1rem;
+  }
+  .contact__heading {
+    font-size: clamp(2.2rem, 12vw, 3rem);
+  }
+  .contact__form {
+    padding: 1.3rem 1rem;
+  }
+  .admin__tabs {
+    margin-inline: -0.25rem;
+  }
+}
+
+/* landscape phones — keep modals usable */
+@media (max-height: 500px) and (orientation: landscape) {
+  .project-modal__panel {
+    grid-template-columns: 1fr;
+    max-height: 92svh;
+  }
+  .project-modal__art {
+    min-height: 160px;
+  }
+  .blog-modal__art {
+    display: none;
+  }
+  .blog-modal__body {
+    padding-top: 1.2rem;
+  }
+}

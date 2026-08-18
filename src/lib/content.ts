@@ -88,8 +88,8 @@ export interface PortfolioContent {
 }
 
 export const STORAGE_KEY = "amit-gangwar-portfolio-v1";
-export const ADMIN_USER = "admin";
-export const ADMIN_PASS = "Itsme@portfolio";
+export const ADMIN_USER = import.meta.env.VITE_ADMIN_USER ?? "admin";
+export const ADMIN_PASS = import.meta.env.VITE_ADMIN_PASS ?? "Itsme@portfolio";
 export const ADMIN_SESSION_KEY = "amit-gangwar-admin-auth";
 
 export const DEFAULT_CONTENT: PortfolioContent = {
