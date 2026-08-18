@@ -47,6 +47,8 @@ body {
   font-weight: 400;
   line-height: 1.5;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -647,6 +649,38 @@ ul {
   height: 22vw;
   opacity: 0.3;
 }
+
+@media (max-width: 760px) {
+  .hero__blob-1,
+  .hero__blob-2,
+  .hero__blob-3,
+  .hero__blob-4 {
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+  }
+  .hero__blob-1 {
+    top: -15%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .hero__blob-2 {
+    top: 35%;
+    right: 50%;
+    transform: translateX(50%);
+  }
+  .hero__blob-3 {
+    bottom: -15%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .hero__blob-4 {
+    top: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
 .hero__vignette {
   position: absolute;
   inset: 0;
@@ -806,11 +840,13 @@ ul {
   padding-block: clamp(1.5rem, 4vw, 2.5rem);
   border-block: 1px solid var(--border);
   background: var(--bg-soft);
+  width: 100%;
 }
 .marquee__track {
   display: flex;
   width: max-content;
   will-change: transform;
+  min-width: 200%;
 }
 .marquee__row {
   display: inline-flex;
@@ -1377,6 +1413,13 @@ ul {
   padding-left: clamp(1.25rem, 4vw, 3rem);
   padding-right: 2rem;
   width: max-content;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.testimonials__track::-webkit-scrollbar {
+  display: none;
 }
 .testimonials__card {
   width: min(420px, 78vw);
@@ -1388,6 +1431,7 @@ ul {
   justify-content: space-between;
   gap: 2rem;
   min-height: 280px;
+  scroll-snap-align: start;
 }
 .testimonials__quote {
   font-size: clamp(1.2rem, 1.8vw, 1.55rem);
@@ -1437,6 +1481,32 @@ ul {
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  overflow: hidden;
+}
+.contact__blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .contact__blob {
+    width: 280px !important;
+    height: 280px !important;
+    filter: blur(60px);
+  }
+  .contact__blob:first-child {
+    top: 5% !important;
+    left: 50% !important;
+    transform: translateX(-50%);
+  }
+  .contact__blob:last-child {
+    bottom: 5% !important;
+    right: 50% !important;
+    transform: translateX(50%);
+  }
 }
 .contact__inner {
   position: relative;
@@ -2690,6 +2760,11 @@ html {
   .path__note {
     padding-left: 1rem;
   }
+  .path__node {
+    left: -0.9rem;
+    width: 11px;
+    height: 11px;
+  }
 
   /* kind words */
   .testimonials__card {
@@ -2699,6 +2774,8 @@ html {
   }
   .testimonials__track {
     padding-left: 1.25rem;
+    width: 100%;
+    max-width: 100%;
   }
 
   /* contact */
@@ -2735,6 +2812,10 @@ html {
   .project-modal {
     padding: 0.75rem;
   }
+  .project-modal__panel {
+    width: 100%;
+    max-width: 100vw;
+  }
   .project-modal__body {
     padding: 1.4rem 1.15rem 1.8rem;
   }
@@ -2750,6 +2831,7 @@ html {
   .blog-modal__panel {
     max-height: 92svh;
     width: 100%;
+    max-width: 100vw;
     border-radius: 22px 22px 0 0;
   }
   .blog-modal__art {
@@ -2780,6 +2862,61 @@ html {
   .admin-portrait {
     width: 120px;
     height: 150px;
+  }
+}
+
+/* ===== tablet (768px - 1024px) ===== */
+@media (min-width: 761px) and (max-width: 1024px) {
+  .section {
+    padding-block: clamp(4rem, 10vw, 7rem);
+  }
+  .container {
+    padding-inline: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  .hero__name {
+    font-size: clamp(4rem, 12vw, 8rem);
+  }
+  .hero__name--long {
+    font-size: clamp(2.5rem, 9vw, 5rem);
+  }
+  .hero__lede {
+    font-size: clamp(1.1rem, 2vw, 1.3rem);
+  }
+
+  .about__grid {
+    gap: clamp(2rem, 5vw, 4rem);
+  }
+  .about__visual-wrap {
+    max-width: 400px;
+  }
+
+  .skills__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .work__row {
+    grid-template-columns: 2.5rem 1.3fr 1fr 1fr 2rem;
+    gap: 0.8rem;
+  }
+
+  .blog__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .testimonials__card {
+    width: min(380px, 85vw);
+  }
+
+  .project-modal__panel {
+    grid-template-columns: 1fr;
+  }
+  .project-modal__art {
+    min-height: 220px;
+  }
+
+  .blog-modal__panel {
+    width: min(85vw, 600px);
   }
 }
 

@@ -35,8 +35,8 @@ export function Contact() {
   return (
     <section id="contact" className="section contact">
       <div className="contact__bg" aria-hidden>
-        <div className="blob" style={{ top: "10%", left: "10%", background: "#c8ff5e", width: 360, height: 360, opacity: 0.18 }} />
-        <div className="blob" style={{ bottom: "0%", right: "5%", background: "#9b7bff", width: 380, height: 380, opacity: 0.2 }} />
+        <div className="contact__blob" style={{ top: "10%", left: "10%", background: "#c8ff5e", width: 360, height: 360, opacity: 0.18 }} />
+        <div className="contact__blob" style={{ bottom: "0%", right: "5%", background: "#9b7bff", width: 380, height: 380, opacity: 0.2 }} />
       </div>
 
       <div className="container contact__inner">
