@@ -2028,12 +2028,12 @@ ul {
   gap: 1.15rem;
   padding-block: 0.4rem;
 }
-.blog-modal__content p {
+.blog-modal__para {
   font-size: clamp(1rem, 1.3vw, 1.08rem);
   line-height: 1.78;
   color: var(--text-dim);
 }
-.blog-modal__content p:first-child::first-letter {
+.blog-modal__content > div:first-child .blog-modal__para::first-letter {
   font-family: "Instrument Serif", serif;
   font-style: italic;
   font-size: 2.9em;
@@ -2041,6 +2041,78 @@ ul {
   line-height: 0.82;
   padding-right: 0.35rem;
   color: var(--text);
+}
+.blog-modal__h {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  padding-top: 0.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+.blog-modal__h::before {
+  content: "";
+  width: 18px;
+  height: 1.5px;
+  background: var(--accent);
+  flex-shrink: 0;
+  align-self: center;
+}
+.blog-modal__ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-left: 0.2rem;
+}
+.blog-modal__ul li {
+  position: relative;
+  padding-left: 1.2rem;
+  font-size: clamp(0.98rem, 1.25vw, 1.05rem);
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+.blog-modal__ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 8px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+.blog-modal__content strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.blog-modal__content code {
+  font-family: "Space Grotesk", monospace;
+  font-size: 0.86em;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.12em 0.45em;
+  color: var(--accent);
+}
+.blog-modal__code {
+  background: rgba(7, 7, 11, 0.75);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem;
+  overflow-x: auto;
+  line-height: 1.6;
+}
+.blog-modal__code code {
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.86rem;
+  color: var(--text-dim);
+  white-space: pre;
 }
 .blog-modal__foot {
   margin-top: 0.6rem;

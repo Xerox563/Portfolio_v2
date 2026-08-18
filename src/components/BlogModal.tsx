@@ -5,6 +5,65 @@ import { getLenis } from "../lib/smoothScroll";
 import { PreviewShape } from "./PreviewShape";
 import { formatDate } from "../lib/format";
 
+type Block =
+  | { type: "p"; text: string }
+  | { type: "h"; text: string }
+  | { type: "ul"; items: string[] }
+  | { type: "code"; text: string };
+
+/** Split the raw blog content into paragraphs, headings, lists and code blocks. */
+function parseContent(content: string): Block[] {
+  const blocks: Block[] = [];
+  const raw = content
+    .split(/\n\s*\n/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  for (const block of raw) {
+    if (block.startsWith("```")) {
+      blocks.push({
+        type: "code",
+        text: block.replace(/^```[a-zA-Z]*\s*\n?/, "").replace(/\n?```$/, "").trim(),
+      });
+    } else if (block.split("\n").every((l) => /^[-*]\s/.test(l.trim()))) {
+      blocks.push({
+        type: "ul",
+        items: block.split("\n").map((l) => l.trim().replace(/^[-*]\s/, "")),
+      });
+    } else if (isHeading(block)) {
+      blocks.push({ type: "h", text: block.replace(/^\d+\.\s*/, "").trim() });
+    } else {
+      blocks.push({ type: "p", text: block });
+    }
+  }
+  return blocks;
+}
+
+function isHeading(block: string) {
+  if (block.includes("\n")) return false;
+  const t = block.trim();
+  if (t.length > 80) return false;
+  return /^\d+\.\s/.test(t) || t.endsWith(":");
+}
+
+/** Inline bold (**text**) and code (`text`) within a block. */
+function Inline({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean);
+  return (
+    <>
+      {parts.map((p, i) => {
+        if (p.startsWith("**") && p.endsWith("**")) {
+          return <strong key={i}>{p.slice(2, -2)}</strong>;
+        }
+        if (p.startsWith("`") && p.endsWith("`")) {
+          return <code key={i}>{p.slice(1, -1)}</code>;
+        }
+        return <span key={i}>{p}</span>;
+      })}
+    </>
+  );
+}
+
 export function BlogModal({
   blog,
   liked,
@@ -33,7 +92,7 @@ export function BlogModal({
     };
   }, [onClose]);
 
-  const paragraphs = blog.content.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
+  const blocks = parseContent(blog.content);
 
   const handleLike = () => {
     setHeart(true);
@@ -89,15 +148,30 @@ export function BlogModal({
           </header>
 
           <div className="blog-modal__content">
-            {paragraphs.map((p, i) => (
-              <motion.p
+            {blocks.map((b, i) => (
+              <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 + i * 0.06, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ delay: 0.25 + i * 0.05, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               >
-                {p}
-              </motion.p>
+                {b.type === "p" && (
+                  <p className="blog-modal__para">
+                    <Inline text={b.text} />
+                  </p>
+                )}
+                {b.type === "h" && <h3 className="blog-modal__h"><Inline text={b.text} /></h3>}
+                {b.type === "ul" && (
+                  <ul className="blog-modal__ul">
+                    {b.items.map((it, ii) => (
+                      <li key={ii}><Inline text={it} /></li>
+                    ))}
+                  </ul>
+                )}
+                {b.type === "code" && (
+                  <pre className="blog-modal__code"><code>{b.text}</code></pre>
+                )}
+              </motion.div>
             ))}
           </div>
 

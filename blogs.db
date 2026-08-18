@@ -1,131 +1,102 @@
 [
   {
-    "id": "portfolio-that-feels-alive",
-    "title": "Building a Portfolio That Feels Alive",
-    "excerpt": "Motion isn't decoration — it's the difference between a page and a place. Here's how I approach animated, performance-first portfolios.",
-    "content": "When someone lands on your portfolio they make a judgment in under a second. Not about your taste in colors — about whether you care. Motion is the fastest way to communicate that you care about the experience, not just the output.\n\nThe trick is restraint. Every animation should have a reason: guiding the eye, confirming an action, or rewarding a scroll. If a transition doesn't answer a question the visitor just asked, cut it.\n\nPerformance is non-negotiable. I keep animations transform-and-opacity only, use scroll-driven values instead of JavaScript timers, and respect prefers-reduced-motion at every level. A portfolio that stutters undermines everything it tries to say.\n\nThe result feels less like a document and more like a room you walk through. That's the goal — pages are read, places are visited.",
+    "id": "production-rag-pipeline",
+    "title": "How I Built a Production RAG Pipeline That Actually Works",
+    "excerpt": "When I started building a resume matching system, I thought RAG was just \"throw documents in a vector DB and ask GPT questions.\" Spoiler: that's not e…",
+    "content": "When I started building a resume matching system, I thought RAG was just \"throw documents in a vector DB and ask GPT questions.\" Spoiler: that's not even close to production-ready.\n\nHere's what I learned the hard way.\n\nThe naive approach: chunk PDFs → embed with OpenAI → store in pgvector → query. Sounds simple, breaks in 3 days.\n\nProblems I hit:\n- Chunking by arbitrary token count creates context loss\n- Search returns irrelevant results because embeddings don't understand intent\n- No way to trace which document a response came from\n- Costs explode when querying 1000+ resumes\n\nHere's what actually worked:\n\n1. Semantic Chunking\nInstead of dumb 512-token chunks, I split by sentence boundaries and kept related content together. ResearchRAG showed this matters — semantic chunks have 40% better retrieval accuracy.\n\n2. Reranking (the secret sauce)\nAfter vector search returns top 10, use a lightweight reranker (I used Cohere) to re-score them. This single step improved accuracy by 60%. Sounds expensive, isn't — reranking is 100x cheaper than running the LLM on bad context.\n\n3. Citation Tracking\nStore the source document and chunk ID with every retrieval. When the LLM answers \"what's their leadership experience?\", the frontend shows which resume section it came from. Users trust it. Regulators love it.\n\n4. Hybrid Search\nPure semantic search misses exact matches. I added BM25 keyword search and combined scores: 0.7 * semantic + 0.3 * keyword. Handles both \"10 years Python experience\" (keyword win) and \"built scalable backend systems\" (semantic win).\n\nResult: 1000+ resumes, sub-second latency, 92% relevance on manual testing.\n\nWhat I'd do differently: Start with semantic chunking and reranking day 1. Don't waste time on naive embeddings.",
     "tags": [
-      "design",
-      "motion",
-      "frontend"
+      "RAG",
+      "AI",
+      "Backend"
     ],
     "palette": "linear-gradient(135deg,#c8ff5e,#5ec8ff)",
     "shape": "wave",
-    "readTime": 4,
-    "likes": 42,
-    "createdAt": "2026-07-02T10:00:00.000Z",
-    "updatedAt": "2026-07-02T10:00:00.000Z"
+    "readTime": 2,
+    "likes": 0,
+    "createdAt": "2026-07-29T10:13:01.106Z",
+    "updatedAt": "2026-07-29T10:13:01.106Z"
   },
   {
-    "id": "why-typescript-every-time",
-    "title": "Why I Reach for TypeScript Every Time",
-    "excerpt": "Types aren't paperwork. They're a design tool that catches the mistakes you didn't know you were making.",
-    "content": "I used to think types slowed me down. Then I shipped a refactor that touched forty files and the compiler found the three places I would have broken. That's the moment TypeScript stopped being a tax and started being a colleague.\n\nThe real payoff isn't autocomplete — it's courage. When every boundary of your system is declared, you can change large pieces with confidence. You refactor more, so your codebase stays young.\n\nTypes also read as documentation. A well-named interface tells the next developer more than a paragraph of comments. The types are the truth; the implementation is just details.\n\nStart small if you have to: add types where it hurts most, then widen. The goal isn't 100% coverage, it's 100% honesty at the edges where systems meet.",
+    "id": "async-queues-recruitment",
+    "title": "Async Task Queues Saved My Recruitment Platform From Burning Money",
+    "excerpt": "We launched a recruitment tool that used to sync job postings, screen candidates, and update pipelines in real time. Sounded great. Crashed under load…",
+    "content": "We launched a recruitment tool that used to sync job postings, screen candidates, and update pipelines in real time. Sounded great. Crashed under load.\n\nThe problem: every sync operation → API call → wait for response → update database. One job posting = 50 API calls. 10 postings = 500 calls. 100 concurrent users = we're dead.\n\nI moved everything to SQS + async workers.\n\nHow it works now:\n1. Frontend submits job posting\n2. FastAPI validates → publishes to SQS → returns 202 (accepted)\n3. Worker picks up message → calls APIs in parallel → updates DB\n4. Failed? Retry 3x → goes to Dead Letter Queue → alert sent\n\nResult: recruitment cycle time dropped from 6 days to 2.4 days (40% faster). Cost per operation: 1/10th what it was.\n\nThe key insight: users don't need instant responses. They need reliable ones. Async queues let you be both.\n\nWhat I implemented:\n- Idempotency keys (same request twice = same result, not duplicate work)\n- Structured logging (trace every message: which queue, which worker, what failed)\n- DLQ monitoring (automatic alerts if jobs fail 3x)\n\nLesson learned: if your endpoint takes > 1 second, you probably need a queue.",
     "tags": [
-      "typescript",
-      "engineering"
+      "Backend",
+      "Queues",
+      "Scaling"
     ],
     "palette": "linear-gradient(135deg,#ff5ea0,#9b7bff)",
     "shape": "grid",
-    "readTime": 3,
-    "likes": 37,
-    "createdAt": "2026-06-18T09:00:00.000Z",
-    "updatedAt": "2026-06-18T09:00:00.000Z"
+    "readTime": 1,
+    "likes": 0,
+    "createdAt": "2026-08-02T10:13:01.106Z",
+    "updatedAt": "2026-08-02T10:13:01.106Z"
   },
   {
-    "id": "art-of-the-loading-state",
-    "title": "The Art of the Loading State",
-    "excerpt": "Waiting is a feeling. Design the in-between moments and your product feels twice as fast.",
-    "content": "Every request your app makes is a story with three beats: it starts, it resolves, or it fails. Most products only design the happy ending — then wonder why users complain about speed.\n\nThe perception of speed is designable. A skeleton that mirrors the final layout feels instant compared to a spinner, because your brain starts reading the page before the data arrives. Optimistic updates feel like magic because the app answers before the server does.\n\nBut the most important state is the failure state. A polite, specific error — with a retry button — turns a dead end into a conversation. Error messages are UX, not afterthoughts.\n\nNothing you ship will be as fast as your ambition. What you can control is how gracefully the gap is filled. That's where craft lives.",
+    "id": "realtime-dashboards-websockets",
+    "title": "Real-Time Dashboards Without Polling — WebSockets + Redis Pub/Sub",
+    "excerpt": "I built an analytics dashboard that used to refresh every 5 seconds via polling. Users hated it. Bandwidth was terrible. Database was getting crushed.",
+    "content": "I built an analytics dashboard that used to refresh every 5 seconds via polling. Users hated it. Bandwidth was terrible. Database was getting crushed.\n\nSwitched to WebSockets + Redis pub/sub. Performance changed completely.\n\nHere's the architecture:\n\nOld way (polling):\nBrowser → GET /metrics every 5s → database query → return JSON\nWith 1000 concurrent users = 12,000 queries per minute to the database. That's not scalable.\n\nNew way (pub/sub):\nCelery job: every 30s, compute metrics → publish to Redis channel\nWebSocket handler: subscribed to that channel → instantly fan-out to all clients\n1000 users → 1 database query per 30s → all get updated at the same time\n\nBenefits:\n- 99% less database load\n- Updates happen instantly (not in 5-second increments)\n- Bandwidth drops because we're not sending repeated data\n- Users feel like the dashboard is \"alive\"\n\nWhat I learned:\n- WebSockets aren't overkill for real-time (they're the right tool)\n- Redis pub/sub scales to thousands of subscribers on one machine\n- The hard part isn't the tech, it's handling disconnects gracefully (browser closes, network drops, server restarts)\n\nCode pattern: That one line replaced 12,000 database queries per minute.",
     "tags": [
-      "ux",
-      "performance"
+      "Realtime",
+      "WebSockets",
+      "Redis"
     ],
     "palette": "linear-gradient(135deg,#5ec8ff,#9b7bff)",
     "shape": "aura",
-    "readTime": 3,
-    "likes": 29,
-    "createdAt": "2026-05-27T14:30:00.000Z",
-    "updatedAt": "2026-05-27T14:30:00.000Z"
+    "readTime": 1,
+    "likes": 0,
+    "createdAt": "2026-08-06T10:13:01.106Z",
+    "updatedAt": "2026-08-06T10:13:01.106Z"
   },
   {
-    "id": "react-server-components-simply",
-    "title": "React Server Components, Explained Simply",
-    "excerpt": "The mental model that finally made RSC click — and why it changes where your code runs.",
-    "content": "For years React had one job: render things in the browser. Server Components quietly flip the script — some of your components run on the server, once, and only their output ships to the client.\n\nThe win is bundle size. Server components don't send their JavaScript at all. Libraries that used to cost 200kb of client code can live entirely on the server, and the browser never knows.\n\nThe rule of thumb is simple: server components for anything that reads data, client components for anything interactive, and you compose them freely. A server component can render a client component, and the boundary is explicit in the file extension.\n\nThe mental shift is treating your React tree as a mix of server and client islands instead of one client-only app. Once it clicks, you start asking a better question — not \"where does this render?\" but \"who needs this data, and who needs this code?\".",
+    "id": "idempotency-keys-production",
+    "title": "Idempotency Keys — How I Stopped Creating Duplicate Records",
+    "excerpt": "One bug destroyed my day: a user submitted a job posting, connection dropped, they clicked submit again. Now we have two identical job postings in the…",
+    "content": "One bug destroyed my day: a user submitted a job posting, connection dropped, they clicked submit again. Now we have two identical job postings in the system.\n\nSimple problem. Surprisingly hard to solve correctly.\n\nThe naive fix: check if posting already exists. Doesn't work because of timing: between checking and inserting, another request came through. Race condition.\n\nThe real solution: Idempotency Keys.\n\nHow it works:\n1. Client sends request with header: `Idempotency-Key: abc-123-def`\n2. Server checks Redis: `GET idempotent:{key}`\n3. If exists → return stored result (we've seen this before)\n4. If not → process request → store result → SET Redis key with TTL 24h\n\nWhy this matters:\n- Exactly once semantics (the holy grail of distributed systems)\n- Works even if your server crashes mid-request (Redis remembers the result)\n- Users can retry forever, always get same outcome\n- No more duplicate records in the database\n\nReal example from my code:\nUser submits recruitment posting with `Idempotency-Key: uuid`\nRequest 1: processes → returns job_id: 123\nRequest 2 (network retried): returns job_id: 123 (same, not 124)\n\nThis single pattern has saved me from so many bugs.\n\nLesson: if your endpoint mutates state, use idempotency keys.",
     "tags": [
-      "react",
-      "architecture"
+      "Backend",
+      "Reliability"
     ],
     "palette": "linear-gradient(135deg,#c8ff5e,#ff5ea0)",
     "shape": "ring",
-    "readTime": 5,
-    "likes": 51,
-    "createdAt": "2026-05-12T08:00:00.000Z",
-    "updatedAt": "2026-05-12T08:00:00.000Z"
+    "readTime": 1,
+    "likes": 0,
+    "createdAt": "2026-08-10T10:13:01.106Z",
+    "updatedAt": "2026-08-10T10:13:01.106Z"
   },
   {
-    "id": "css-is-a-language-now",
-    "title": "CSS Is a Programming Language Now",
-    "excerpt": "Cascade layers, container queries, nesting. The CSS I learned in 2015 is unrecognizable — in the best way.",
-    "content": "CSS used to be the part of the job you tolerated. Today it's a full language with real engineering muscle: nesting, cascade layers, container queries, and a color syntax that finally makes sense.\n\nContainer queries are the sleeper hit. Components can now respond to their own container instead of the viewport — the same card component behaves differently in a sidebar and a hero. That's the encapsulation CSS always needed.\n\nCascade layers replace the specificity arms race. You declare your layers once — reset, tokens, components, utilities — and the order of your file stops being a coin flip. No more !important to win a war nobody wanted.\n\nIf you haven't looked at CSS in two years, look again. It's not the same language. It's the language the web was always meant to have.",
+    "id": "structured-logging-production",
+    "title": "Structured Logging Saved My Production Debug Session",
+    "excerpt": "3 AM. A recruitment sync is failing silently. Users are missing candidates. I have no idea where.",
+    "content": "3 AM. A recruitment sync is failing silently. Users are missing candidates. I have no idea where.\n\nOld logging approach: print(f\"Processing job {job_id}\")\nProblem: trying to grep logs for a specific user's data is like finding a needle in a haystack while wearing mittens.\n\nSwitched to structured JSON logging. Changed everything.\n\nInstead of: Took 10 seconds to see: API returned 429 (rate limited), that's why sync stopped. Old logs? Would have taken 45 minutes.\n\nPattern:\n```python\nlogger.info(json.dumps({\n    \"trace_id\": trace_id,\n    \"task_id\": task_id,\n    \"step\": \"SEARCH\",\n    \"latency_ms\": latency,\n    \"tokens_used\": tokens,\n    \"status\": \"COMPLETED\"\n}))\n```\n\nThis is the difference between debugging blindfolded and having a spotlight.",
     "tags": [
-      "css",
-      "frontend"
+      "DevOps",
+      "Observability"
     ],
     "palette": "linear-gradient(135deg,#9b7bff,#ff5ea0)",
     "shape": "wave",
-    "readTime": 4,
-    "likes": 33,
-    "createdAt": "2026-04-21T16:45:00.000Z",
-    "updatedAt": "2026-04-21T16:45:00.000Z"
+    "readTime": 1,
+    "likes": 0,
+    "createdAt": "2026-08-14T10:13:01.106Z",
+    "updatedAt": "2026-08-14T10:13:01.106Z"
   },
   {
-    "id": "small-honest-mvps",
-    "title": "Shipping Faster With Small, Honest MVPs",
-    "excerpt": "The fastest way to ship is to build less — but the art is choosing what to leave out without lying.",
-    "content": "Every project starts with a beautiful roadmap and ends with a backlog of promises. The projects that actually ship do one thing genuinely well and let everything else be honest scaffolding.\n\nAn MVP is not a bad version of your final product. It's the smallest version of your product that proves the core question: does anyone want this? If the core doesn't work, a beautiful edge case won't save you.\n\nThe discipline is in the cut list. Features that are easy to add later can wait. Features that change how the product feels cannot. I keep a \"later\" list visible and celebrated — cutting a feature isn't failure, it's focus.\n\nSpeed is a feature users feel immediately. A small, honest thing shipped this week beats a grand thing shipped next quarter — every time.",
+    "id": "agents-that-dont-hallucinate",
+    "title": "Building an AI Agent That Doesn't Hallucinate (Mostly)",
+    "excerpt": "I built an agent to autonomously screen recruitment candidates. First version: it made up candidates that didn't exist.",
+    "content": "I built an agent to autonomously screen recruitment candidates. First version: it made up candidates that didn't exist.\n\nThis is the problem with agents: they're confident liars.\n\nHere's what I learned:\n\nAgent failures come in 3 categories:\n\n1. Hallucination (making stuff up)\nSolution: RAG + citation. Don't let the agent answer without a source document. Every answer must come from an ingested resume or job posting.\n\n2. Infinite loops (agent keeps calling same tool over and over)\nSolution: LangGraph state machine. Define exactly which nodes connect to which. No \"go back to PLAN if confused\" loops. If an agent gets stuck after 3 retries, fail gracefully.\n\n3. Tool misuse (agent calls search with wrong parameters)\nSolution: function calling with strict schemas. Tell GPT: \"when you call search, parameters MUST be {query: string, max_results: int}\". Enforce it.\n\nMy current agent design:\n\nState machine with explicit states:\n- PLAN: break goal into steps (GPT decides what to do)\n- SEARCH: call Tavily (only web search tool available)\n- APPROVAL: pause, ask human \"are you sure about this?\" (for sensitive actions)\n- SUMMARIZE: condense findings\n- SYNTHESIZE: final answer\n\nKey rule: agent CANNOT go backward. No loops. If it fails at SEARCH, it goes to FAILED state, not back to PLAN.\n\nCost tracking:\n- Every step logs token usage\n- Show users: \"this answer cost $0.0043 and took 12 seconds\"\n- Prevents surprise $500 bills\n\nResult: recruited 200+ candidates via automation without a single hallucination that made it to a human.\n\nNot 100% accurate. Good enough for production.",
     "tags": [
-      "product",
-      "mindset"
-    ],
-    "palette": "linear-gradient(135deg,#5ec8ff,#c8ff5e)",
-    "shape": "grid",
-    "readTime": 4,
-    "likes": 26,
-    "createdAt": "2026-04-03T11:20:00.000Z",
-    "updatedAt": "2026-04-03T11:20:00.000Z"
-  },
-  {
-    "id": "favorite-dev-tools-2026",
-    "title": "My Favorite Dev Tools in 2026",
-    "excerpt": "The short list of tools that earn their place in my daily workflow — and the one rule for choosing them.",
-    "content": "Tooling is a rabbit hole with a happy exit: the tools you forget you're using. Here's the short list that earned its place this year.\n\nEditor: whatever makes you fastest, tuned once and never fussed with again. My config is years old and I still discover one shortcut a month. Terminal: fast, scriptable, and quiet. My whole setup runs from dotfiles that are versioned like code.\n\nThe rest of the stack changes, but the rule stays: a tool must either save time every day or unlock something impossible without it. If a tool needs learning twice, it's not a tool — it's a hobby.\n\nThe best tool decision I made this year was uninstalling three tools I'd stopped using. Maintenance is also a cost.",
-    "tags": [
-      "tooling",
-      "workflow"
-    ],
-    "palette": "linear-gradient(135deg,#ff5ea0,#5ec8ff)",
-    "shape": "aura",
-    "readTime": 3,
-    "likes": 44,
-    "createdAt": "2026-03-14T09:15:00.000Z",
-    "updatedAt": "2026-03-14T09:15:00.000Z"
-  },
-  {
-    "id": "designing-for-reduced-motion",
-    "title": "Designing for Reduced Motion",
-    "excerpt": "Motion sickness isn't a niche problem. Making your animations optional makes your product better for everyone.",
-    "content": "About a third of users have some preference for reduced motion — and that's before you count vestibular disorders, ADHD, or simply people working in noisy environments where a spinning loader is pure torture.\n\nThe web platform solved the hard part years ago: prefers-reduced-motion is one media query, and every major browser supports it. The design work is deciding what to do with it.\n\nThe approach that works: motion becomes a layer, not a texture. Core interactions — showing, hiding, focus — always work, in a single clean frame. The decorative choreography fades to instant. Scrolling feels controlled, not cinematic.\n\nReduced motion users aren't asking for a worse experience. They're asking for the same experience without the discomfort. Design that treats that as a first-class constraint is just better design.",
-    "tags": [
-      "accessibility",
-      "motion"
+      "AI",
+      "Agents",
+      "LangGraph"
     ],
     "palette": "linear-gradient(135deg,#9b7bff,#5ec8ff)",
-    "shape": "ring",
-    "readTime": 4,
-    "likes": 31,
-    "createdAt": "2026-02-19T13:00:00.000Z",
-    "updatedAt": "2026-02-19T13:00:00.000Z"
+    "shape": "grid",
+    "readTime": 2,
+    "likes": 0,
+    "createdAt": "2026-08-18T10:13:01.106Z",
+    "updatedAt": "2026-08-18T10:13:01.106Z"
   }
 ]
