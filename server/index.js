@@ -193,6 +193,42 @@ const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const CONTENT_KEY = "portfolio:content";
 const BLOGS_KEY = "portfolio:blogs";
+const SEED_HASH_KEY = "portfolio:seed-hash";
+
+function fileHash(file) {
+  try {
+    return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  } catch {
+    return null;
+  }
+}
+
+/* In Redis mode, seed from the bundled db.json / blogs.db whenever their
+   content hash differs from the last seed. This keeps deployed data in sync
+   with the repo files, while pure code deploys (unchanged files) keep the
+   live Redis state (admin edits) intact. */
+async function ensureSeeded() {
+  const r = await redis();
+  if (!r) return;
+  try {
+    const prev = await redisGet(SEED_HASH_KEY);
+    const contentHash = fileHash(DB_FILE);
+    const blogsHash = fileHash(BLOGS_FILE);
+    const next = { content: contentHash, blogs: blogsHash };
+    const changed =
+      !prev ||
+      prev.content !== contentHash ||
+      prev.blogs !== blogsHash;
+    if (changed) {
+      if (contentHash) await redisSet(CONTENT_KEY, readJson(DB_FILE, null));
+      if (blogsHash) await redisSet(BLOGS_KEY, readJson(BLOGS_FILE, null));
+      await redisSet(SEED_HASH_KEY, next);
+      console.log("seeded Redis from bundled files (hash changed)");
+    }
+  } catch (err) {
+    console.error("seed check failed:", err.message);
+  }
+}
 
 let redisClient = null;
 async function redis() {
@@ -228,6 +264,7 @@ async function redisSet(key, data) {
 async function getContent() {
   if (REDIS_URL && REDIS_TOKEN) {
     try {
+      await ensureSeeded();
       const cached = await redisGet(CONTENT_KEY);
       if (cached) return cached;
       const local = readJson(DB_FILE, null);
@@ -253,6 +290,7 @@ async function saveContent(data) {
 async function getBlogsList() {
   if (REDIS_URL && REDIS_TOKEN) {
     try {
+      await ensureSeeded();
       const cached = await redisGet(BLOGS_KEY);
       if (cached) return cached;
       const local = readJson(BLOGS_FILE, null) || SEED_BLOGS;
@@ -287,7 +325,11 @@ app.use(cors());
 app.use(express.json({ limit: "6mb" }));
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    storage: REDIS_URL && REDIS_TOKEN ? "redis" : "file",
+    seeded: fileHash(DB_FILE) !== null && fileHash(BLOGS_FILE) !== null,
+  });
 });
 
 /* ---- portfolio content (db.json) ---- */
