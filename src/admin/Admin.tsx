@@ -860,7 +860,8 @@ function BlogsTab() {
       <div className="admin-panel">
         <div className="admin-card glass">
           <p className="admin-hint">
-            Server offline — start it with <code>npm run server</code> to manage blogs.
+            API not reachable — locally start it with <code>npm run server</code>, or check that
+            the deployment’s API is live (<code>/api/health</code>).
           </p>
         </div>
       </div>
