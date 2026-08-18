@@ -4,6 +4,7 @@ import type { Blog } from "../lib/api";
 import { getLenis } from "../lib/smoothScroll";
 import { PreviewShape } from "./PreviewShape";
 import { formatDate } from "../lib/format";
+import { ModalPortal } from "./ModalPortal";
 
 type Block =
   | { type: "p"; text: string }
@@ -23,7 +24,10 @@ function parseContent(content: string): Block[] {
     if (block.startsWith("```")) {
       blocks.push({
         type: "code",
-        text: block.replace(/^```[a-zA-Z]*\s*\n?/, "").replace(/\n?```$/, "").trim(),
+        text: block
+          .replace(/^```[a-zA-Z]*\s*\n?/, "")
+          .replace(/\n?```$/, "")
+          .trim(),
       });
     } else if (block.split("\n").every((l) => /^[-*]\s/.test(l.trim()))) {
       blocks.push({
@@ -101,99 +105,131 @@ export function BlogModal({
   };
 
   return (
-    <motion.div
-      className="blog-modal"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label={blog.title}
-    >
-      <motion.article
-        className="blog-modal__panel glass"
-        initial={{ y: 56, opacity: 0, scale: 0.97 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={{ y: 40, opacity: 0, scale: 0.97 }}
-        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-        onClick={(e) => e.stopPropagation()}
+    <ModalPortal>
+      <motion.div
+        className="blog-modal"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-label={blog.title}
       >
-        <button className="blog-modal__close" onClick={onClose} data-cursor="hover" aria-label="Close">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M4 4L14 14M14 4L4 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-          </svg>
-        </button>
+        <motion.article
+          className="blog-modal__panel glass"
+          initial={{ y: 56, opacity: 0, scale: 0.97 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 40, opacity: 0, scale: 0.97 }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="blog-modal__close"
+            onClick={onClose}
+            data-cursor="hover"
+            aria-label="Close"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path
+                d="M4 4L14 14M14 4L4 14"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
 
-        <div className="blog-modal__art" style={{ background: blog.palette }}>
-          <PreviewShape shape={blog.shape} />
-          <div className="blog-modal__art-grid" aria-hidden />
-          {blog.tags.length > 0 && (
-            <div className="blog-modal__tags">
-              {blog.tags.map((t) => (
-                <span key={t} className="blog-modal__tag mono">{t}</span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="blog-modal__body">
-          <header className="blog-modal__head">
-            <span className="mono blog-modal__meta">
-              {formatDate(blog.createdAt)} · {blog.readTime} min read
-            </span>
-            <h1 className="blog-modal__title display">{blog.title}</h1>
-            <p className="blog-modal__excerpt serif">{blog.excerpt}</p>
-          </header>
-
-          <div className="blog-modal__content">
-            {blocks.map((b, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 + i * 0.05, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              >
-                {b.type === "p" && (
-                  <p className="blog-modal__para">
-                    <Inline text={b.text} />
-                  </p>
-                )}
-                {b.type === "h" && <h3 className="blog-modal__h"><Inline text={b.text} /></h3>}
-                {b.type === "ul" && (
-                  <ul className="blog-modal__ul">
-                    {b.items.map((it, ii) => (
-                      <li key={ii}><Inline text={it} /></li>
-                    ))}
-                  </ul>
-                )}
-                {b.type === "code" && (
-                  <pre className="blog-modal__code"><code>{b.text}</code></pre>
-                )}
-              </motion.div>
-            ))}
+          <div className="blog-modal__art" style={{ background: blog.palette }}>
+            <PreviewShape shape={blog.shape} />
+            <div className="blog-modal__art-grid" aria-hidden />
+            {blog.tags.length > 0 && (
+              <div className="blog-modal__tags">
+                {blog.tags.map((t) => (
+                  <span key={t} className="blog-modal__tag mono">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
-          <footer className="blog-modal__foot">
-            <div className="blog-modal__foot-divider" />
-            <button className="blog-modal__like-btn" onClick={handleLike} data-cursor="hover">
-              <motion.span
-                className="blog-modal__heart"
-                animate={heart ? { scale: [1, 1.6, 1] } : { scale: 1 }}
-                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                data-on={liked}
-              >
-                {liked ? "♥" : "♡"}
-              </motion.span>
-              <span className="blog-modal__like-label">
-                {liked ? "Liked" : "Like this note"}
+          <div className="blog-modal__body">
+            <header className="blog-modal__head">
+              <span className="mono blog-modal__meta">
+                {formatDate(blog.createdAt)} · {blog.readTime} min read
               </span>
-              <span className="mono blog-modal__like-count">{blog.likes}</span>
-            </button>
-          </footer>
-        </div>
-      </motion.article>
-    </motion.div>
+              <h1 className="blog-modal__title display">{blog.title}</h1>
+              <p className="blog-modal__excerpt serif">{blog.excerpt}</p>
+            </header>
+
+            <div className="blog-modal__content">
+              {blocks.map((b, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: 0.25 + i * 0.05,
+                    duration: 0.6,
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                >
+                  {b.type === "p" && (
+                    <p className="blog-modal__para">
+                      <Inline text={b.text} />
+                    </p>
+                  )}
+                  {b.type === "h" && (
+                    <h3 className="blog-modal__h">
+                      <Inline text={b.text} />
+                    </h3>
+                  )}
+                  {b.type === "ul" && (
+                    <ul className="blog-modal__ul">
+                      {b.items.map((it, ii) => (
+                        <li key={ii}>
+                          <Inline text={it} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {b.type === "code" && (
+                    <pre className="blog-modal__code">
+                      <code>{b.text}</code>
+                    </pre>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+
+            <footer className="blog-modal__foot">
+              <div className="blog-modal__foot-divider" />
+              <button
+                className="blog-modal__like-btn"
+                onClick={handleLike}
+                data-cursor="hover"
+              >
+                <motion.span
+                  className="blog-modal__heart"
+                  animate={heart ? { scale: [1, 1.6, 1] } : { scale: 1 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  data-on={liked}
+                >
+                  {liked ? "♥" : "♡"}
+                </motion.span>
+                <span className="blog-modal__like-label">
+                  {liked ? "Liked" : "Like this note"}
+                </span>
+                <span className="mono blog-modal__like-count">
+                  {blog.likes}
+                </span>
+              </button>
+            </footer>
+          </div>
+        </motion.article>
+      </motion.div>
+    </ModalPortal>
   );
 }
