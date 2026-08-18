@@ -11,6 +11,7 @@ alter table public.portfolio_kv enable row level security;
 
 -- Allow everything for the service role (the API uses the service role key).
 -- Public anon access is not needed; the site only reads through the API.
+drop policy if exists "service_role_all" on public.portfolio_kv;
 create policy "service_role_all"
   on public.portfolio_kv
   for all
