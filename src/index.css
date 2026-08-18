@@ -33,6 +33,15 @@
   box-sizing: border-box;
 }
 
+.split-line,
+.reveal-line {
+  overflow: hidden;
+}
+
+.reveal-line > * {
+  display: block;
+}
+
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

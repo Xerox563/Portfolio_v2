@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSmoothScroll } from "./lib/smoothScroll";
+import { useGSAPAnimations } from "./lib/useGSAPAnimations";
 import { Cursor } from "./components/Cursor";
 import { Preloader } from "./components/Preloader";
 import { Navbar } from "./components/Navbar";
@@ -40,6 +41,7 @@ export default function App() {
 function Site() {
   const [loaded, setLoaded] = useState(false);
   useSmoothScroll();
+  useGSAPAnimations();
 
   return (
     <>
@@ -86,11 +88,21 @@ function Site() {
           speed={1.4}
         />
 
-        <Projects />
-        <Timeline />
-        <Testimonials />
-        <BlogSection />
-        <Contact />
+        <section data-gsap-reveal>
+          <Projects />
+        </section>
+        <section data-gsap-reveal>
+          <Timeline />
+        </section>
+        <section data-gsap-reveal>
+          <Testimonials />
+        </section>
+        <section data-gsap-reveal>
+          <BlogSection />
+        </section>
+        <section data-gsap-reveal>
+          <Contact />
+        </section>
         <Footer />
       </motion.main>
     </>
