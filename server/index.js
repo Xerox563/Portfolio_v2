@@ -187,11 +187,99 @@ Reduced motion users aren't asking for a worse experience. They're asking for th
   },
 ];
 
-let content = readJson(DB_FILE, null);
-let blogs = readJson(BLOGS_FILE, null);
-if (!blogs) {
-  blogs = SEED_BLOGS;
-  writeJson(BLOGS_FILE, blogs);
+/* ---- storage: local files by default, Upstash Redis on Vercel ---- */
+
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const CONTENT_KEY = "portfolio:content";
+const BLOGS_KEY = "portfolio:blogs";
+
+let redisClient = null;
+async function redis() {
+  if (!redisClient && REDIS_URL && REDIS_TOKEN) {
+    const { Redis } = await import("@upstash/redis");
+    redisClient = new Redis({ url: REDIS_URL, token: REDIS_TOKEN });
+  }
+  return redisClient;
+}
+
+let contentCache = readJson(DB_FILE, null);
+let blogsCache = null;
+
+async function redisGet(key) {
+  const r = await redis();
+  if (!r) return null;
+  const raw = await r.get(key);
+  if (raw == null) return null;
+  const str = typeof raw === "string" ? raw : JSON.stringify(raw);
+  try {
+    return JSON.parse(str);
+  } catch {
+    return null;
+  }
+}
+
+async function redisSet(key, data) {
+  const r = await redis();
+  if (!r) return;
+  await r.set(key, JSON.stringify(data));
+}
+
+async function getContent() {
+  if (REDIS_URL && REDIS_TOKEN) {
+    try {
+      const cached = await redisGet(CONTENT_KEY);
+      if (cached) return cached;
+      const local = readJson(DB_FILE, null);
+      if (local) await redisSet(CONTENT_KEY, local);
+      return local;
+    } catch {
+      /* redis unavailable — fall back to local copy */
+      return readJson(DB_FILE, null);
+    }
+  }
+  return contentCache;
+}
+
+async function saveContent(data) {
+  if (REDIS_URL && REDIS_TOKEN) {
+    await redisSet(CONTENT_KEY, data);
+  } else {
+    contentCache = data;
+    writeJson(DB_FILE, data);
+  }
+}
+
+async function getBlogsList() {
+  if (REDIS_URL && REDIS_TOKEN) {
+    try {
+      const cached = await redisGet(BLOGS_KEY);
+      if (cached) return cached;
+      const local = readJson(BLOGS_FILE, null) || SEED_BLOGS;
+      await redisSet(BLOGS_KEY, local);
+      return local;
+    } catch {
+      /* redis unavailable — fall back to local copy */
+      return readJson(BLOGS_FILE, null) || SEED_BLOGS;
+    }
+  }
+  if (!blogsCache) {
+    blogsCache = readJson(BLOGS_FILE, null);
+    if (!blogsCache) {
+      blogsCache = SEED_BLOGS;
+      writeJson(BLOGS_FILE, blogsCache);
+    }
+  }
+  return blogsCache;
+}
+
+async function saveBlogs(list) {
+  if (REDIS_URL && REDIS_TOKEN) {
+    await redisSet(BLOGS_KEY, list);
+  } else {
+    blogsCache = list;
+    writeJson(BLOGS_FILE, list);
+  }
 }
 
 const app = express();
@@ -204,28 +292,33 @@ app.get("/api/health", (_req, res) => {
 
 /* ---- portfolio content (db.json) ---- */
 
-app.get("/api/content", (_req, res) => {
-  if (!content) return res.status(404).json({ error: "db.json not found" });
-  res.json(content);
+app.get("/api/content", async (_req, res) => {
+  const data = await getContent();
+  if (!data) return res.status(404).json({ error: "db.json not found" });
+  res.json(data);
 });
 
-app.put("/api/content", (req, res) => {
+app.put("/api/content", async (req, res) => {
   const body = req.body;
   if (!body || typeof body !== "object") {
     return res.status(400).json({ error: "Invalid content" });
   }
-  content = body;
-  writeJson(DB_FILE, content);
-  res.json({ ok: true });
+  try {
+    await saveContent(body);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Could not save content" });
+  }
 });
 
 /* ---- blogs (blogs.db) ---- */
 
-app.get("/api/blogs", (_req, res) => {
-  res.json({ blogs });
+app.get("/api/blogs", async (_req, res) => {
+  res.json({ blogs: await getBlogsList() });
 });
 
-app.get("/api/blogs/:id", (req, res) => {
+app.get("/api/blogs/:id", async (req, res) => {
+  const blogs = await getBlogsList();
   const blog = blogs.find((b) => b.id === req.params.id);
   if (!blog) return res.status(404).json({ error: "Blog not found" });
   res.json(blog);
@@ -257,46 +350,46 @@ function buildBlog(body, id) {
   };
 }
 
-app.post("/api/blogs", (req, res) => {
+app.post("/api/blogs", async (req, res) => {
   try {
     const id = req.body.id ? String(req.body.id) : crypto.randomUUID();
     const blog = buildBlog(req.body, id);
-    blogs = [blog, ...blogs];
-    writeJson(BLOGS_FILE, blogs);
+    const blogs = await getBlogsList();
+    await saveBlogs([blog, ...blogs]);
     res.status(201).json(blog);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
 });
 
-app.put("/api/blogs/:id", (req, res) => {
-  const i = blogs.findIndex((b) => b.id === req.params.id);
-  if (i === -1) return res.status(404).json({ error: "Blog not found" });
+app.put("/api/blogs/:id", async (req, res) => {
   try {
+    const blogs = await getBlogsList();
+    const i = blogs.findIndex((b) => b.id === req.params.id);
+    if (i === -1) return res.status(404).json({ error: "Blog not found" });
     const blog = buildBlog(req.body, req.params.id);
-    blogs = blogs.map((b) => (b.id === req.params.id ? blog : b));
-    writeJson(BLOGS_FILE, blogs);
+    await saveBlogs(blogs.map((b) => (b.id === req.params.id ? blog : b)));
     res.json(blog);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
 });
 
-app.delete("/api/blogs/:id", (req, res) => {
+app.delete("/api/blogs/:id", async (req, res) => {
+  const blogs = await getBlogsList();
   const i = blogs.findIndex((b) => b.id === req.params.id);
   if (i === -1) return res.status(404).json({ error: "Blog not found" });
-  blogs = blogs.filter((b) => b.id !== req.params.id);
-  writeJson(BLOGS_FILE, blogs);
+  await saveBlogs(blogs.filter((b) => b.id !== req.params.id));
   res.json({ ok: true });
 });
 
-app.post("/api/blogs/:id/like", (req, res) => {
+app.post("/api/blogs/:id/like", async (req, res) => {
+  const blogs = await getBlogsList();
   const i = blogs.findIndex((b) => b.id === req.params.id);
   if (i === -1) return res.status(404).json({ error: "Blog not found" });
   const liked = Boolean(req.body && req.body.liked);
   const next = Math.max(0, blogs[i].likes + (liked ? 1 : -1));
-  blogs = blogs.map((b, bi) => (bi === i ? { ...b, likes: next } : b));
-  writeJson(BLOGS_FILE, blogs);
+  await saveBlogs(blogs.map((b, bi) => (bi === i ? { ...b, likes: next } : b)));
   res.json({ likes: next });
 });
 
@@ -306,6 +399,10 @@ if (fs.existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR));
 }
 
-app.listen(PORT, () => {
-  console.log(`Portfolio server running on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Portfolio server running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

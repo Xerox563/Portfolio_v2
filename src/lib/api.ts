@@ -27,9 +27,11 @@ export interface BlogInput {
   shape: ProjectShape;
 }
 
+const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
+
 async function request<T>(url: string, init?: RequestInit): Promise<T | null> {
   try {
-    const res = await fetch(url, init);
+    const res = await fetch(`${API_BASE}${url}`, init);
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
