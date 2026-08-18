@@ -46,6 +46,12 @@ export interface SocialLink {
   href: string;
 }
 
+export interface Testimonial {
+  text: string;
+  name: string;
+  role: string;
+}
+
 export interface PortfolioContent {
   identity: {
     name: string;
@@ -77,6 +83,7 @@ export interface PortfolioContent {
   };
   projects: Project[];
   experience: ExperienceEntry[];
+  testimonials: Testimonial[];
   socials: SocialLink[];
 }
 
@@ -221,6 +228,28 @@ export const DEFAULT_CONTENT: PortfolioContent = {
     { label: "X / Twitter", href: "https://x.com" },
     { label: "Dribbble", href: "https://dribbble.com" },
   ],
+  testimonials: [
+    {
+      text: "Amit writes clean code and explains complex ideas effortlessly. Curious, funny, and always asking the right questions.",
+      name: "Mohd Waseem",
+      role: "Software Engineer, Coforge",
+    },
+    {
+      text: "Fast shipping with attention to detail. His curiosity and clarity when explaining technical concepts are exceptional.",
+      name: "Abhishek Dixit",
+      role: "Software Engineer, i8CLOUD",
+    },
+    {
+      text: "Deep technical understanding combined with exceptional clarity. Curious about learning and making things understandable for everyone.",
+      name: "Arohi Singh",
+      role: "DevOps Engineer, Amazon",
+    },
+    {
+      text: "Technically strong with rare clarity in explanations. Curious, humble, and brings humor to problem-solving.",
+      name: "Mohit Singh",
+      role: "Senior Software Engineer, Deutsche Bank",
+    },
+  ],
 };
 
 export function normalizeContent(parsed: Partial<PortfolioContent>): PortfolioContent {
@@ -230,6 +259,7 @@ export function normalizeContent(parsed: Partial<PortfolioContent>): PortfolioCo
     skills: { ...DEFAULT_CONTENT.skills, ...(parsed.skills ?? {}) },
     projects: parsed.projects ?? DEFAULT_CONTENT.projects,
     experience: parsed.experience ?? DEFAULT_CONTENT.experience,
+    testimonials: parsed.testimonials ?? DEFAULT_CONTENT.testimonials,
     socials: parsed.socials ?? DEFAULT_CONTENT.socials,
   };
 }

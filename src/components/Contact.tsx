@@ -3,15 +3,33 @@ import { motion } from "framer-motion";
 import { Magnetic } from "./Magnetic";
 import { Reveal } from "./Reveal";
 import { useContent } from "../lib/content";
+import { sendContactMessage } from "../lib/contact";
 
 export function Contact() {
   const { identity, socials } = useContent();
-  const [status, setStatus] = useState<"idle" | "sending" | "done">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
+  const [error, setError] = useState("");
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (status === "sending") return;
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    const name = String(data.get("name") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim();
+    const message = String(data.get("message") ?? "").trim();
+    if (!name || !email || !message) return;
+
     setStatus("sending");
-    setTimeout(() => setStatus("done"), 1300);
+    setError("");
+    try {
+      await sendContactMessage({ name, email, message });
+      setStatus("done");
+      form.reset();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Message could not be sent. Please try again.");
+      setStatus("error");
+    }
   };
 
   return (
@@ -66,6 +84,15 @@ export function Contact() {
                 Thanks — I’ll get back to you within two working days.
               </motion.p>
             )}
+            {status === "error" && (
+              <motion.p
+                className="contact__success contact__error"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {error}
+              </motion.p>
+            )}
           </form>
 
           <aside className="contact__aside">
@@ -112,6 +139,7 @@ function FloatingInput({
 
   const common = {
     id,
+    name: id,
     required,
     "data-cursor": "text",
     onFocus: () => setFilled(true),

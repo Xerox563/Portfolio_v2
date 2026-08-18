@@ -301,5 +301,27 @@
       "label": "Instagram",
       "href": "https://www.instagram.com/_just._amit_/"
     }
+  ],
+  "testimonials": [
+    {
+      "text": "Amit writes clean code and explains complex ideas effortlessly. Curious, funny, and always asking the right questions.",
+      "name": "Mohd Waseem",
+      "role": "Software Engineer, Coforge"
+    },
+    {
+      "text": "Fast shipping with attention to detail. His curiosity and clarity when explaining technical concepts are exceptional.",
+      "name": "Abhishek Dixit",
+      "role": "Software Engineer, i8CLOUD"
+    },
+    {
+      "text": "Deep technical understanding combined with exceptional clarity. Curious about learning and making things understandable for everyone.",
+      "name": "Arohi Singh",
+      "role": "DevOps Engineer, Amazon"
+    },
+    {
+      "text": "Technically strong with rare clarity in explanations. Curious, humble, and brings humor to problem-solving.",
+      "name": "Mohit Singh",
+      "role": "Senior Software Engineer, Deutsche Bank"
+    }
   ]
 }

@@ -1449,6 +1449,9 @@ ul {
   color: var(--accent);
   font-size: 0.9rem;
 }
+.contact__error {
+  color: var(--accent-2);
+}
 
 .contact__aside-title {
   font-family: "Space Grotesk", sans-serif;
