@@ -187,8 +187,10 @@ Reduced motion users aren't asking for a worse experience. They're asking for th
   },
 ];
 
-/* ---- storage: PostgreSQL (production) -> Upstash Redis -> local files ---- */
+/* ---- storage: Supabase -> PostgreSQL -> Upstash Redis -> local files ---- */
 
+const SUPABASE_URL = (process.env.SUPABASE_URL ?? "").replace(/\/+$/, "");
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DATABASE_URL = process.env.DATABASE_URL;
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -197,17 +199,72 @@ const BLOGS_KEY = "portfolio:blogs";
 const SEED_HASH_KEY = "portfolio:seed-hash";
 const RESEED_ON_DEPLOY = process.env.RESEED_ON_DEPLOY === "1";
 
-const STORAGE_MODE = DATABASE_URL
-  ? "postgres"
-  : REDIS_URL && REDIS_TOKEN
-    ? "redis"
-    : "file";
+const STORAGE_MODE = SUPABASE_URL && SUPABASE_KEY
+  ? "supabase"
+  : DATABASE_URL
+    ? "postgres"
+    : REDIS_URL && REDIS_TOKEN
+      ? "redis"
+      : "file";
 
 function fileHash(file) {
   try {
     return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
   } catch {
     return null;
+  }
+}
+
+/* ---- Supabase (PostgREST) helpers ---- */
+
+function sbHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...extra,
+  };
+}
+
+async function sbGet(key) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/portfolio_kv?key=eq.${encodeURIComponent(key)}&select=value`,
+    { headers: sbHeaders({ Accept: "application/json" }) }
+  );
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return rows.length ? rows[0].value : null;
+}
+
+async function sbSet(key, data) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/portfolio_kv`, {
+    method: "POST",
+    headers: sbHeaders({ Prefer: "resolution=merge-duplicates" }),
+    body: JSON.stringify([{ key, value: data }]),
+  });
+}
+
+/* Seed Supabase only when a key is missing (first run), unless
+   RESEED_ON_DEPLOY=1 forces a refresh from the bundled files on every deploy. */
+async function ensureSbSeeded() {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return;
+  try {
+    const content = readJson(DB_FILE, null);
+    const blogs = readJson(BLOGS_FILE, null) || SEED_BLOGS;
+    const rows = await Promise.all([sbGet(CONTENT_KEY), sbGet(BLOGS_KEY)]);
+    if (content && (RESEED_ON_DEPLOY || rows[0] == null)) {
+      await sbSet(CONTENT_KEY, content);
+      console.log("seeded Supabase content");
+    }
+    if (blogs && (RESEED_ON_DEPLOY || rows[1] == null)) {
+      await sbSet(BLOGS_KEY, blogs);
+      console.log("seeded Supabase blogs");
+    }
+  } catch (err) {
+    console.error("supabase seed failed:", err.message);
   }
 }
 
@@ -346,6 +403,17 @@ async function redisSet(key, data) {
 }
 
 async function getContent() {
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      await ensureSbSeeded();
+      const cached = await sbGet(CONTENT_KEY);
+      if (cached) return cached;
+      return readJson(DB_FILE, null);
+    } catch {
+      /* supabase unavailable — fall back to local copy */
+      return readJson(DB_FILE, null);
+    }
+  }
   if (DATABASE_URL) {
     try {
       await ensurePgSeeded();
@@ -374,7 +442,9 @@ async function getContent() {
 }
 
 async function saveContent(data) {
-  if (DATABASE_URL) {
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    await sbSet(CONTENT_KEY, data);
+  } else if (DATABASE_URL) {
     await pgSet(CONTENT_KEY, data);
   } else if (REDIS_URL && REDIS_TOKEN) {
     await redisSet(CONTENT_KEY, data);
@@ -385,6 +455,17 @@ async function saveContent(data) {
 }
 
 async function getBlogsList() {
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      await ensureSbSeeded();
+      const cached = await sbGet(BLOGS_KEY);
+      if (cached) return cached;
+      return readJson(BLOGS_FILE, null) || SEED_BLOGS;
+    } catch {
+      /* supabase unavailable — fall back to local copy */
+      return readJson(BLOGS_FILE, null) || SEED_BLOGS;
+    }
+  }
   if (DATABASE_URL) {
     try {
       await ensurePgSeeded();
@@ -420,7 +501,9 @@ async function getBlogsList() {
 }
 
 async function saveBlogs(list) {
-  if (DATABASE_URL) {
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    await sbSet(BLOGS_KEY, list);
+  } else if (DATABASE_URL) {
     await pgSet(BLOGS_KEY, list);
   } else if (REDIS_URL && REDIS_TOKEN) {
     await redisSet(BLOGS_KEY, list);
@@ -433,11 +516,17 @@ async function saveBlogs(list) {
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "6mb" }));
+app.use("/api", (_req, res, next) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  res.set("Pragma", "no-cache");
+  next();
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
     storage: STORAGE_MODE,
+    supabaseConfigured: Boolean(SUPABASE_URL && SUPABASE_KEY),
     databaseConfigured: Boolean(DATABASE_URL),
     redisConfigured: Boolean(REDIS_URL && REDIS_TOKEN),
     seeded: fileHash(DB_FILE) !== null && fileHash(BLOGS_FILE) !== null,

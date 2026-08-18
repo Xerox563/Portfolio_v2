@@ -2,11 +2,6 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": {
-    "api/index.js": {
-      "includeFiles": "{db.json,blogs.db}"
-    }
-  },
   "rewrites": [
     { "source": "/((?!api/|assets/|favicon\\.svg$).*)", "destination": "/index.html" }
   ]
